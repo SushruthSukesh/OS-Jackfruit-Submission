@@ -9,8 +9,8 @@
  *   - Signal handling for graceful shutdown and child reaping
  *
  * Authors:
- *   Supreeth K        PES1UG24CS483
- *   Shrihari Nagesh   PES1UG24CS445
+ *   Sushruth Sukesh        PES1UG24CS486
+ *   Sujay Hegde  PES1UG24CS478
  */
 
 #define _GNU_SOURCE
