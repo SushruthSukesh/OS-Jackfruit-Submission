@@ -232,7 +232,9 @@ Handling Termination
 The supervisor distinguishes between different ways a container can stop:
 
 Normal Exit: The container finishes execution → state = EXITED
+
 Manual Stop: Stopped using engine stop → state = STOPPED
+
 Forced Kill: Killed by kernel (e.g., memory limit exceeded) → state = KILLED
 
 This classification helps the ps command display accurate container status.
