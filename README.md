@@ -133,7 +133,7 @@ ps aux | grep -E "engine|defunct"
 ---
 1. Multi-Container Supervision
 Multi-container supervision
-<img width="1566" height="467" alt="screenshot 1" src="https://github.com/user-attachments/assets/027f5315-c741-4600-8467-07d3ff484413" />
+![Screenshot](screenshots/screenshot_1.png)
 
 
 Caption. A single engine supervisor process (PID 17763) parents two concurrent container children (PIDs 17780, 17788) as shown by pstree. The supervisor log confirms Started container alpha and Started container beta under the same supervisor.
