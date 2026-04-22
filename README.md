@@ -241,28 +241,36 @@ This classification helps the ps command display accurate container status.
 
 
 ### 3. IPC, Threads, and Synchronization
+1. Two Types of Communication (IPC)
+🟢 Path A — Logging (container → supervisor)
 
-Our project uses two distinct IPC mechanisms:
+👉 Container output goes to the supervisor using a pipe
 
-**Path A — Logging Pipes** (container → supervisor): Each container's stdout/stderr is connected to a pipe. The write end goes to the child (via `dup2`); the read end stays with the supervisor. A dedicated **producer thread** per container reads from this pipe and pushes `log_item_t` chunks into a shared bounded buffer.
+Flow:
 
-**Path B — Unix Domain Socket** (CLI → supervisor): The CLI client connects to a Unix domain socket at `/tmp/mini_runtime.sock`, sends a `control_request_t` struct, and receives a `control_response_t`. This is a different mechanism from the logging pipes, providing a clean separation between data-plane (logging) and control-plane (CLI) communication.
+Container → pipe → producer thread → buffer → consumer → log file
+Container writes logs
+Supervisor reads and stores them
 
-**Bounded Buffer**: The log buffer is a circular array of 16 `log_item_t` entries with `head`, `tail`, and `count` fields.
+🟢 Path B — Control (CLI → supervisor)
 
-**Race conditions without synchronization**:
-- Multiple producer threads could simultaneously increment `tail` and `count`, causing lost log entries or buffer corruption
-- A producer writing to a slot while a consumer reads from the same slot would produce garbled log output
-- Shutdown signaling without proper broadcast could leave threads blocked forever (deadlock)
+👉 Commands like:
 
-**Synchronization choice**: We use a **pthread mutex** with **two condition variables** (`not_empty`, `not_full`):
-- **Mutex** protects all buffer state (head, tail, count, shutting_down)
-- **`not_full` condition**: Producers wait here when the buffer is full; consumers signal after removing an item
-- **`not_empty` condition**: The consumer waits here when the buffer is empty; producers signal after inserting
+./engine start alpha
 
-We chose mutex + condition variables over semaphores because condition variables integrate naturally with the `shutting_down` flag — we can check the flag inside the critical section and use `pthread_cond_broadcast` to wake all waiting threads during shutdown. With semaphores, shutdown signaling would require additional coordination.
+use a Unix domain socket
 
-**Metadata lock**: A separate `pthread_mutex_t metadata_lock` protects the container linked list, preventing races between the main event loop (adding/reading containers) and the reaping logic (updating state).
+Flow:
+
+CLI → socket → supervisor → response
+
+2. Why Bounded Buffer is Needed
+
+👉 Container may produce logs faster than writing to file
+
+So we use:
+
+Fast → buffer → slow
 
 ### 4. Memory Management and Enforcement
 
