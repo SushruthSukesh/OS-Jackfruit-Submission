@@ -204,20 +204,39 @@ Our runtime achieves process and filesystem isolation through Linux namespaces a
 
 ### 2. Supervisor and Process Lifecycle
 
-A long-running parent supervisor is essential because it acts as the central coordination point for multiple container lifecycles:
+The supervisor is a long-running process that manages the entire lifecycle of all containers.
 
-**Process Creation**: The supervisor uses `clone()` with namespace flags to create each container as a child process. The `clone()` system call creates a new process that shares the parent's address space (like `fork`) but enters new namespaces. The child then calls `chroot`, mounts `/proc`, and `exec`s the target command.
+Process Creation
 
-**Parent-Child Relationships**: The supervisor (parent) maintains a linked list of `container_record_t` entries, each tracking the container's host PID, state, memory limits, and exit status. This metadata is protected by a pthread mutex because multiple threads (the main event loop, producer threads) may access it concurrently.
+The supervisor creates each container using clone() with namespace flags. The child process then sets up isolation by calling chroot(), mounting /proc, and finally executing the target program using exec().
 
-**Reaping**: When a container exits, the kernel sends `SIGCHLD` to the supervisor. Our `SIGCHLD` handler simply sets a flag; actual reaping happens in the main event loop via `waitpid(-1, &status, WNOHANG)` in a loop. This non-blocking approach ensures we reap all exited children without blocking the supervisor. Failing to reap would create zombie processes that consume kernel process table entries.
+Tracking Containers
 
-**Signal Delivery**: The supervisor distinguishes three exit paths:
-- **Normal exit**: Container's command completed — `WIFEXITED` is true, state becomes `CONTAINER_EXITED`
-- **Manual stop**: Supervisor set `stop_requested` before sending `SIGTERM`/`SIGKILL` — state becomes `CONTAINER_STOPPED`
-- **Hard-limit kill**: Kernel module sent `SIGKILL` without `stop_requested` — state becomes `CONTAINER_KILLED`
+The supervisor maintains a list of all running containers. For each container, it stores:
 
-This three-way classification is critical for the `ps` command to report accurate termination reasons.
+Process ID (PID)
+Container name
+Current state (running, stopped, exited, killed)
+Memory limits
+
+A mutex is used to protect this data since multiple threads may access it at the same time.
+
+Reaping (Cleanup)
+
+When a container exits, the kernel sends a SIGCHLD signal to the supervisor. The supervisor then calls waitpid() (in non-blocking mode) to clean up the process.
+
+This prevents zombie processes and ensures proper resource cleanup.
+
+Handling Termination
+
+The supervisor distinguishes between different ways a container can stop:
+
+Normal Exit: The container finishes execution → state = EXITED
+Manual Stop: Stopped using engine stop → state = STOPPED
+Forced Kill: Killed by kernel (e.g., memory limit exceeded) → state = KILLED
+
+This classification helps the ps command display accurate container status.
+
 
 ### 3. IPC, Threads, and Synchronization
 
