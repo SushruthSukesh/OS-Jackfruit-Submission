@@ -136,7 +136,8 @@ Multi-container supervision
 ![Screenshot](screenshots/screenshot_1.png)
 
 
-Caption. A single engine supervisor process (PID 17763) parents two concurrent container children (PIDs 17780, 17788) as shown by pstree. The supervisor log confirms Started container alpha and Started container beta under the same supervisor.
+Caption : A single engine supervisor process (PID 16287) parents two concurrent container children (PIDs 16304, 16309) as shown by pstree. The supervisor log confirms "Started container alpha" and "Started container beta" under the same supervisor.
+
 
 2. Metadata Tracking
 Engine ps output
