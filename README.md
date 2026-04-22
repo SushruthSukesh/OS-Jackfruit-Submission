@@ -279,15 +279,11 @@ Fast → buffer → slow
 - Data pages (heap, stack, globals)
 - Shared library pages mapped into the process
 
-RSS does **not** measure:
-- Swapped-out pages (they're not resident)
-- Shared memory that's mapped but not yet accessed (demand-paged)
-- Kernel memory used on behalf of the process (slab allocations, page tables)
-- File-backed pages that have been evicted from the page cache
-
 **Why soft and hard limits are different policies**: A soft limit serves as an early warning — the container is using more memory than expected, but the workload might be bursty and could naturally reduce usage. Killing the process at the soft limit would cause unnecessary disruption. The hard limit is a safety boundary — if a process exceeds it, the system is at risk of memory pressure affecting other containers or the host. Immediate termination protects system stability.
 
-**Why enforcement belongs in kernel space**: User-space monitoring via `/proc/<pid>/statm` would require periodic polling with inherent latency — a process could allocate and use large amounts of memory between polls. The kernel module runs a timer callback every second and has direct access to `get_mm_rss()` without parsing procfs, making it more efficient. More importantly, the kernel module can send signals directly via `send_sig(SIGKILL, task, 1)` without the race conditions inherent in user-space `kill()` calls where the PID could be reused. The kernel module also naturally handles the case where the user-space supervisor crashes — the timer continues running and enforcing limits independently.
+Why enforce in kernel?
+
+Memory limits are enforced in the kernel because it can monitor memory usage more accurately and act immediately. This avoids delays from user-space checks and ensures containers are quickly stopped if they exceed limits, keeping the system stable.
 
 ### 5. Scheduling Behavior
 
