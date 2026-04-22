@@ -198,9 +198,7 @@ Our runtime achieves process and filesystem isolation through Linux namespaces a
 
 **UTS Namespace** (`CLONE_NEWUTS`): Each container has its own hostname, set to the container ID via `sethostname()`. This isolates the system identity so containers cannot interfere with each other's hostname settings.
 
-**Mount Namespace** (`CLONE_NEWNS`): Each container gets a private mount table. We mount `/proc` inside each container so that tools like `ps` work correctly. Mount changes inside one container (e.g., mounting filesystems) do not affect other containers or the host.
-
-**Filesystem Isolation** (`chroot`): Each container uses `chroot()` to change its root directory to a dedicated rootfs copy. This prevents the container from accessing host filesystem paths. We chose `chroot` over `pivot_root` for simplicity — `chroot` is sufficient when combined with mount namespace isolation, though `pivot_root` would provide stronger isolation by completely detaching the old root.
+**Filesystem Isolation** (`chroot`): Each container uses `chroot()` to change its root directory to a dedicated rootfs copy. This prevents the container from accessing host filesystem paths.
 
 **What the host kernel still shares**: All containers share the same kernel, network stack (we don't use `CLONE_NEWNET`), user namespace, and IPC namespace. The kernel's scheduling, memory management, and device drivers are shared across all containers. This is fundamentally different from a VM, where each guest has its own kernel.
 
